@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incompetech Music Browser</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom scrollbar and player styles */
+        .results-container::-webkit-scrollbar { width: 8px; }
+        .results-container::-webkit-scrollbar-track { background: #f1f1f1; }
+        .results-container::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        .results-container::-webkit-scrollbar-thumb:hover { background: #555; }
+        #audio-player-container { background-color: rgba(209, 213, 219, 0.95); /* gray-300 with opacity */ }
+        /* Loading/Error indicator styles */
+        #loading-indicator { display: block; /* Show initially */ }
+        #error-indicator { display: none; color: red; font-weight: bold;}
+        /* Basic styling for toggle switch */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #4f46e5; /* indigo-600 */
+            transform: translateX(100%); /* Adjust based on size */
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #4f46e5; /* indigo-600 */
+        }
+        .toggle-checkbox {
+            transition: transform 0.2s ease-in-out;
+            left: 0;
+            transform: translateX(0);
+        }
+        /* Ensure pointer events for label */
+        .toggle-label {
+            transition: background-color 0.2s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans">
+    <div class="container mx-auto p-4 md:p-6 lg:p-8 max-w-6xl">
+        <header class="mb-6">
+            <div class="flex flex-wrap justify-between items-center gap-4">
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-700">Incompetech Music Browser</h1>
+                 <!-- Mode Toggle Switch -->
+                <div class="flex items-center space-x-2">
+                    <span id="mode-label" class="text-sm font-medium text-gray-600 whitespace-nowrap">Mode: Local Files</span>
+                    <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="mode-toggle" id="mode-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer border-gray-300"/>
+                        <label for="mode-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </div>
+            </div>
+            <div id="loading-indicator" class="mt-2 text-blue-600">Loading Database... This may take a moment.</div>
+            <div id="error-indicator" class="mt-2"></div> <!-- Error message container -->
+        </header>
+
+        <!-- <<< START: ADDED INFORMATIONAL PANEL >>> -->
+        <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-6 rounded-md shadow-sm" role="alert">
+            <p class="text-sm">
+                Please refer to the <a href="https://incompetech.com/music/royalty-free/faq.html" target="_blank" rel="noopener noreferrer" class="font-medium underline hover:text-blue-900">Incompetech FAQ</a> for information on licensing this music for commercial use.
+            </p>
+            <p class="text-xs mt-1">
+                All music © 1997-2023 Incompetech Inc.
+            </p>
+        </div>
+        <!-- <<< END: ADDED INFORMATIONAL PANEL >>> -->
+
+
+        <!-- Main content area, initially hidden -->
+        <main id="main-content" class="hidden">
+            <!-- Search Form -->
+            <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-600">Search Filters</h2>
+                <form id="search-form" action="javascript:void(0);">
+                    <!-- ... form content ... -->
+                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div><label for="genre" class="block text-sm font-medium text-gray-700">Genre(s):</label><select name="genre" id="genre" multiple class="mt-1 block w-full h-24 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" disabled><option value="">Loading Genres...</option></select></div>
+                        <div><label for="instruments" class="block text-sm font-medium text-gray-700">Instruments Contain:</label><select name="instruments" id="instruments" multiple class="mt-1 block w-full h-24 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" disabled><option value="">Loading Instruments...</option></select></div>
+                        <div><label for="feel" class="block text-sm font-medium text-gray-700">Feel Contains:</label><input type="text" name="feel" id="feel" placeholder="e.g., Bouncy, Dark" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" disabled></div>
+                        <div><label for="description" class="block text-sm font-medium text-gray-700">Description Contains:</label><input type="text" name="description" id="description" placeholder="e.g., Space, Horror" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" disabled></div>
+                        <div><label for="title" class="block text-sm font-medium text-gray-700">Title Contains:</label><input type="text" name="title" id="title" placeholder="e.g., Village" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" disabled></div>
+                        <div><label for="usuan" class="block text-sm font-medium text-gray-700">USUAN:</label><input type="text" name="usuan" id="usuan" placeholder="e.g., USUAN1700007" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" disabled></div>
+                        <div class="grid grid-cols-2 gap-2"><div><label for="min_bpm" class="block text-sm font-medium text-gray-700">Min BPM:</label><input type="number" name="min_bpm" id="min_bpm" min="0" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" disabled></div><div><label for="max_bpm" class="block text-sm font-medium text-gray-700">Max BPM:</label><input type="number" name="max_bpm" id="max_bpm" min="0" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" disabled></div></div>
+                        <div class="grid grid-cols-2 gap-2"><div><label for="min_length" class="block text-sm font-medium text-gray-700">Min Length (MM:SS):</label><input type="text" name="min_length" id="min_length" placeholder="e.g., 1:30" pattern="\d{1,2}:\d{2}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" disabled></div><div><label for="max_length" class="block text-sm font-medium text-gray-700">Max Length (MM:SS):</label><input type="text" name="max_length" id="max_length" placeholder="e.g., 4:00" pattern="\d{1,2}:\d{2}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" disabled></div></div>
+                     </div>
+                     <div class="mt-6 flex justify-end space-x-3"><button type="reset" id="clear-button" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" disabled>Clear</button><button type="button" id="random-button" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" disabled><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>Play Random</button><button type="submit" id="find-button" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" disabled>Find Songs</button></div>
+                </form>
+            </div>
+
+            <!-- Results Table -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-600">Results <span id="results-count">(0)</span></h2>
+                <div class="results-container overflow-y-auto max-h-[60vh] pr-2">
+                    <table id="results-table" class="min-w-full divide-y divide-gray-200">
+                        <!-- ... table thead ... -->
+                        <thead class="bg-gray-50 sticky top-0 z-10">
+                            <tr>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">Play</th>
+                                <th scope="col" class="sortable-header px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200" data-sort-column="1" data-sort-type="string">Title <span class="sort-icon inline-block ml-1"></span></th>
+                                <th scope="col" class="sortable-header px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200" data-sort-column="2" data-sort-type="string">Genre <span class="sort-icon inline-block ml-1"></span></th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Feel</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Instruments</th>
+                                <th scope="col" class="sortable-header px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200" data-sort-column="5" data-sort-type="number">BPM <span class="sort-icon inline-block ml-1"></span></th>
+                                <th scope="col" class="sortable-header px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-200" data-sort-column="6" data-sort-type="length">Length <span class="sort-icon inline-block ml-1"></span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-body" class="bg-white divide-y divide-gray-200">
+                             <!-- Initial message -->
+                             <tr><td colspan="7" class="text-center text-gray-500 py-4">Loading database...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <!-- Fixed Audio Player -->
+        <div id="audio-player-container" class="fixed bottom-0 left-0 right-0 p-3 border-t border-gray-300 shadow-md z-50">
+            <!-- ... player content ... -->
+             <div class="container mx-auto flex items-center justify-between max-w-6xl"><span id="now-playing" class="text-sm text-gray-700 font-medium truncate pr-2">No song selected</span><audio id="audio-player" controls class="w-full max-w-md md:max-w-lg">Your browser does not support the audio element.</audio></div>
+        </div>
+        <!-- Spacer -->
+        <div class="h-20"></div>
+    </div>
+
+    <!-- Load Core sql.js Library from CDN using defer -->
+    <script src='https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js' defer></script>
+    <!-- Your Custom App Logic -->
+    <script src="app.js" defer></script>
+</body>
+</html>
